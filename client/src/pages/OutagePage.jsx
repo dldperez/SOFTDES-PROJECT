@@ -1,7 +1,17 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import "../styles/styles.css";
 
 export default function OutagePage() {
+  const [outages, setOutages] = useState([]);
+
+  useEffect(() => {
+    fetch("http://localhost:5000/api/outages")
+      .then((res) => res.json())
+      .then((data) => setOutages(data))
+      .catch((error) => console.error("Error fetching outages:", error));
+  }, []);
+
   return (
     <>
       <header>
@@ -33,6 +43,26 @@ export default function OutagePage() {
           title="Network Coverage Map"
           loading="lazy"
         ></iframe>
+
+        <div style={{ marginTop: "30px" }}>
+          <h2>Current Outage Updates</h2>
+
+          {outages.length === 0 ? (
+            <p>No outage data available.</p>
+          ) : (
+            outages.map((item) => (
+              <div
+                key={item.id}
+                className="router-card"
+                style={{ marginBottom: "15px" }}
+              >
+                <h3>{item.area}</h3>
+                <p>Status: {item.status}</p>
+                <p>Estimated Restoration: {item.estimatedRestoration}</p>
+              </div>
+            ))
+          )}
+        </div>
       </section>
     </>
   );

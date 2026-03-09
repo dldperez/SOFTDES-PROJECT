@@ -8,19 +8,45 @@ export default function ChatPage() {
   ]);
   const [userInput, setUserInput] = useState("");
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!userInput.trim()) return;
 
-    setMessages([
-      ...messages,
-      { sender: "user", text: userInput },
-      {
+    const userMessage = { sender: "user", text: userInput };
+
+    setMessages((prev) => [...prev, userMessage]);
+
+    try {
+      const res = await fetch("http://localhost:5000/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ message: userInput })
+      });
+
+      const data = await res.json();
+
+      const botMessage = {
         sender: "bot",
-        text: "Thanks for your message. Support response will appear here."
-      }
-    ]);
+        text: data.reply
+      };
+
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        { sender: "bot", text: "There was an error contacting the server." }
+      ]);
+      console.error("Error sending message:", error);
+    }
 
     setUserInput("");
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      sendMessage();
+    }
   };
 
   return (
@@ -62,6 +88,7 @@ export default function ChatPage() {
             type="text"
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Type your message..."
           />
           <button onClick={sendMessage}>Send</button>

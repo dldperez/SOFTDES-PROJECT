@@ -1,7 +1,17 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import "../styles/styles.css";
 
 export default function RouterPage() {
+  const [guides, setGuides] = useState([]);
+
+  useEffect(() => {
+    fetch("http://localhost:5000/api/router")
+      .then((res) => res.json())
+      .then((data) => setGuides(data))
+      .catch((error) => console.error("Error fetching router guide:", error));
+  }, []);
+
   return (
     <>
       <header>
@@ -26,19 +36,16 @@ export default function RouterPage() {
         <h1>Router Configuration Guide</h1>
 
         <div className="router-card">
-          <h3>Step 1</h3>
-          <p>Connect your router to the modem using an Ethernet cable.</p>
-
-          <h3>Step 2</h3>
-          <p>
-            Open your browser and go to <b>192.168.1.1</b>.
-          </p>
-
-          <h3>Step 3</h3>
-          <p>Login using your router username and password.</p>
-
-          <h3>Step 4</h3>
-          <p>Configure WiFi name and password.</p>
+          {guides.length === 0 ? (
+            <p>No router guide data available.</p>
+          ) : (
+            guides.map((item) => (
+              <div key={item.step} style={{ marginBottom: "20px" }}>
+                <h3>Step {item.step}</h3>
+                <p>{item.instruction}</p>
+              </div>
+            ))
+          )}
         </div>
       </section>
     </>
