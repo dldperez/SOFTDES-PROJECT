@@ -125,6 +125,7 @@ body {
   width: 400px;
   margin: auto;
   border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .bot-message {
@@ -142,4 +143,10 @@ body {
   margin: 10px 0;
   border-radius: 6px;
   text-align: right;
+}
+
+.map-section iframe {
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
