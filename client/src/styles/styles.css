@@ -85,12 +85,17 @@ body {
 
 .chat-box {
   width: 60%;
-  height: 300px;
+  max-width: 700px;
+  min-height: 300px;
   border: 1px solid #ccc;
-  margin: auto;
+  margin: 20px auto;
   overflow-y: auto;
   padding: 10px;
   background: white;
+  border-radius: 8px;
+
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-input {
@@ -128,25 +133,43 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+.user-message {
+  display: inline-block;
+  max-width: 80%;
+  width: fit-content;
+  padding: 10px 14px;
+  margin: 8px 0;
+  border-radius: 12px;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
 .bot-message {
   background: #f1f1f1;
-  padding: 10px;
-  margin: 10px 0;
-  border-radius: 6px;
+  color: black;
   text-align: left;
+  align-self: flex-start;
 }
 
 .user-message {
   background: #d71920;
   color: white;
-  padding: 10px;
-  margin: 10px 0;
-  border-radius: 6px;
-  text-align: right;
+  text-align: left;
+  align-self: flex-end;
 }
 
 .map-section iframe {
   border-radius: 10px;
   background: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+
+.action-button {
+  padding: 8px 14px;
+  background: #d71920;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }

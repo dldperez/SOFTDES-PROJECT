@@ -1,17 +1,39 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import "../styles/styles.css";
 
 export default function ChatPage() {
+  const navigate = useNavigate();
+
+  const [sessionId] = useState(() => {
+  let savedSession = localStorage.getItem("chatSessionId");
+  if (!savedSession) {
+    savedSession = "session-" + Date.now();
+    localStorage.setItem("chatSessionId", savedSession);
+  }
+  return savedSession;
+});
+
   const [messages, setMessages] = useState([
-    { sender: "bot", text: "Hello! How can I help you today?" }
+    {
+      sender: "bot",
+      text: "Hello! How can I help you today?",
+      intent: null,
+      confidence: null,
+      nextAction: null,
+      entities: null
+    }
   ]);
+
   const [userInput, setUserInput] = useState("");
 
   const sendMessage = async () => {
     if (!userInput.trim()) return;
 
-    const userMessage = { sender: "user", text: userInput };
+    const userMessage = {
+      sender: "user",
+      text: userInput
+    };
 
     setMessages((prev) => [...prev, userMessage]);
 
@@ -21,21 +43,35 @@ export default function ChatPage() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ message: userInput })
+        body: JSON.stringify({
+          message: userInput,
+          sessionId: sessionId
+        })
       });
 
       const data = await res.json();
 
       const botMessage = {
         sender: "bot",
-        text: data.reply
+        text: data.reply,
+        intent: data.intent,
+        confidence: data.confidence,
+        nextAction: data.nextAction,
+        entities: data.entities
       };
 
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
-        { sender: "bot", text: "There was an error contacting the server." }
+        {
+          sender: "bot",
+          text: "There was an error contacting the server.",
+          intent: "error",
+          confidence: 0,
+          nextAction: "none",
+          entities: {}
+        }
       ]);
       console.error("Error sending message:", error);
     }
@@ -46,6 +82,14 @@ export default function ChatPage() {
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       sendMessage();
+    }
+  };
+
+  const handleNextAction = (action) => {
+    if (action === "outage") {
+      navigate("/outage");
+    } else if (action === "router") {
+      navigate("/router");
     }
   };
 
@@ -78,7 +122,19 @@ export default function ChatPage() {
               key={index}
               className={msg.sender === "bot" ? "bot-message" : "user-message"}
             >
-              {msg.text}
+              <p>{msg.text}</p>
+
+              {msg.sender === "bot" &&
+                (msg.nextAction === "outage" || msg.nextAction === "router") && (
+                  <div style={{ marginTop: "10px" }}>
+                    <button
+                      className="action-button"
+                      onClick={() => handleNextAction(msg.nextAction)}
+                    >
+                      Open {msg.nextAction === "outage" ? "Outage Map" : "Router Setup"}
+                    </button>
+                  </div>
+                )}
             </div>
           ))}
         </div>
