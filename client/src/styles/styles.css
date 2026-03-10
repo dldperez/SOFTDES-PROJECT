@@ -173,3 +173,158 @@ body {
   border-radius: 5px;
   cursor: pointer;
 }
+
+.decision-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.choice-button {
+  padding: 12px 16px;
+  background: #d71920;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.choice-button:hover {
+  opacity: 0.9;
+}
+
+.router-history {
+  width: 60%;
+  max-width: 700px;
+  margin: 30px auto 0;
+  text-align: left;
+}
+
+.history-item {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.command-block {
+  margin-top: 20px;
+  text-align: left;
+}
+
+.command-block pre {
+  background: #111827;
+  color: #f9fafb;
+  padding: 14px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.router-notes {
+  margin-top: 20px;
+  text-align: left;
+}
+
+.router-notes ul {
+  padding-left: 20px;
+}
+
+.decision-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.choice-button {
+  padding: 12px 16px;
+  background: #d71920;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.choice-button:hover {
+  opacity: 0.9;
+}
+.command-block {
+  margin-top: 20px;
+  text-align: left;
+}
+
+.command-block pre {
+  background: #111827;
+  color: #f9fafb;
+  padding: 14px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.router-notes {
+  margin-top: 20px;
+  text-align: left;
+}
+
+.router-notes ul {
+  padding-left: 20px;
+}
+
+.decision-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.choice-button {
+  padding: 12px 16px;
+  background: #d71920;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.choice-button:hover {
+  opacity: 0.9;
+}
+
+.router-history {
+  width: 60%;
+  max-width: 700px;
+  margin: 30px auto 0;
+  text-align: left;
+}
+
+.history-item {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.leaflet-map-wrapper {
+  width: 80%;
+  max-width: 900px;
+  margin: 20px auto;
+}
+
+.leaflet-map {
+  height: 450px;
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.outage-list {
+  width: 80%;
+  max-width: 900px;
+  margin: 30px auto 0;
+  text-align: left;
+}
