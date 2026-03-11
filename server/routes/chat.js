@@ -1,4 +1,6 @@
 const express = require("express");
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 const router = express.Router();
 
 // Simple in-memory session store
@@ -14,8 +16,8 @@ function getSession(sessionId) {
         location: null,
         accountNumber: null,
         billingType: null,
-        losStatus: null
-      }
+        losStatus: null,
+      },
     };
   }
   return sessions[sessionId];
@@ -44,7 +46,7 @@ function normalizeText(message) {
     passwrd: "password",
     conection: "connection",
     bilng: "billing",
-    qc: "quezon city"
+    qc: "quezon city",
   };
 
   const words = text.split(/\s+/).map((word) => typoMap[word] || word);
@@ -77,11 +79,14 @@ function normalizeText(message) {
     { from: "baguhin password", to: "change password" },
 
     { from: "reset modem", to: "reset router" },
-    { from: "restart modem", to: "restart router" }
+    { from: "restart modem", to: "restart router" },
   ];
 
   for (const rule of phraseMap) {
-    text = text.replace(new RegExp(`\\b${escapeRegExp(rule.from)}\\b`, "g"), rule.to);
+    text = text.replace(
+      new RegExp(`\\b${escapeRegExp(rule.from)}\\b`, "g"),
+      rule.to
+    );
   }
 
   text = text.replace(/\s+/g, " ").trim();
@@ -95,26 +100,26 @@ function detectIntent(text) {
       { phrase: "hi", weight: 2 },
       { phrase: "hey", weight: 2 },
       { phrase: "kamusta", weight: 3 },
-      { phrase: "kumusta", weight: 3 }
+      { phrase: "kumusta", weight: 3 },
     ],
     no_internet: [
       { phrase: "no internet", weight: 5 },
       { phrase: "cannot connect", weight: 3 },
       { phrase: "cant connect", weight: 3 },
-      { phrase: "disconnected", weight: 2 }
+      { phrase: "disconnected", weight: 2 },
     ],
     check_outage: [
       { phrase: "outage", weight: 4 },
       { phrase: "service interruption", weight: 4 },
       { phrase: "may outage", weight: 4 },
       { phrase: "red los", weight: 4 },
-      { phrase: "network down", weight: 4 }
+      { phrase: "network down", weight: 4 },
     ],
     slow_internet: [
       { phrase: "slow internet", weight: 5 },
       { phrase: "buffering", weight: 2 },
       { phrase: "lag", weight: 2 },
-      { phrase: "unstable connection", weight: 3 }
+      { phrase: "unstable connection", weight: 3 },
     ],
     router_help: [
       { phrase: "router", weight: 2 },
@@ -122,11 +127,11 @@ function detectIntent(text) {
       { phrase: "setup router", weight: 4 },
       { phrase: "configure router", weight: 4 },
       { phrase: "reset router", weight: 4 },
-      { phrase: "restart router", weight: 4 }
+      { phrase: "restart router", weight: 4 },
     ],
     change_wifi_password: [
       { phrase: "change password", weight: 5 },
-      { phrase: "wifi password", weight: 3 }
+      { phrase: "wifi password", weight: 3 },
     ],
     billing: [
       { phrase: "billing", weight: 4 },
@@ -134,8 +139,8 @@ function detectIntent(text) {
       { phrase: "payment", weight: 3 },
       { phrase: "invoice", weight: 3 },
       { phrase: "due date", weight: 3 },
-      { phrase: "balance", weight: 3 }
-    ]
+      { phrase: "balance", weight: 3 },
+    ],
   };
 
   const scores = {};
@@ -161,7 +166,7 @@ function detectIntent(text) {
     return {
       intent: "fallback",
       confidence: 0,
-      matchedKeywords: []
+      matchedKeywords: [],
     };
   }
 
@@ -169,14 +174,14 @@ function detectIntent(text) {
     return {
       intent: "clarify",
       confidence: bestScore,
-      matchedKeywords: matchedKeywords[bestIntent]
+      matchedKeywords: matchedKeywords[bestIntent],
     };
   }
 
   return {
     intent: bestIntent,
     confidence: bestScore,
-    matchedKeywords: matchedKeywords[bestIntent]
+    matchedKeywords: matchedKeywords[bestIntent],
   };
 }
 
@@ -185,7 +190,7 @@ function extractEntities(text) {
     location: null,
     accountNumber: null,
     billingType: null,
-    losStatus: null
+    losStatus: null,
   };
 
   const locations = [
@@ -196,7 +201,7 @@ function extractEntities(text) {
     "caloocan",
     "makati",
     "pasig",
-    "taguig"
+    "taguig",
   ];
 
   const billingTypes = [
@@ -205,7 +210,7 @@ function extractEntities(text) {
     "payment",
     "invoice",
     "reconnection",
-    "disconnection"
+    "disconnection",
   ];
 
   for (const location of locations) {
@@ -261,12 +266,47 @@ function buildResponse(payload) {
     matchedKeywords: payload.matchedKeywords || [],
     entities: payload.entities || {},
     reply: payload.reply,
-    nextAction: payload.nextAction || "none"
+    nextAction: payload.nextAction || "none",
   };
 }
 
-router.post("/", (req, res) => {
+function getUserFromToken(req) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET);
+  } catch (error) {
+    return null;
+  }
+}
+
+function loginRequiredResponse(message, normalizedText, entities) {
+  return buildResponse({
+    originalMessage: message,
+    normalizedText,
+    intent: "auth_required",
+    confidence: 1,
+    entities,
+    reply:
+      "You can ask general support questions without logging in. For account-specific concerns like billing or account verification, please sign in first.",
+    nextAction: "login",
+  });
+}
+
+router.post("/", async (req, res) => {
   const { message, sessionId } = req.body;
+  const currentUser = getUserFromToken(req);
+
+  let dbUser = null;
+  if (currentUser?.userId) {
+    dbUser = await User.findById(currentUser.userId);
+  }
 
   if (!message) {
     return res.status(400).json({
@@ -275,7 +315,7 @@ router.post("/", (req, res) => {
       entities: {},
       matchedKeywords: [],
       reply: "Message is required.",
-      nextAction: "none"
+      nextAction: "none",
     });
   }
 
@@ -295,8 +335,9 @@ router.post("/", (req, res) => {
           intent: "ask_location",
           confidence: 1,
           entities,
-          reply: "Please provide your area or location, like Manila, Quezon City, or Novaliches.",
-          nextAction: "ask_location"
+          reply:
+            "Please provide your area or location, like Manila, Quezon City, or Novaliches.",
+          nextAction: "ask_location",
         })
       );
     }
@@ -313,7 +354,7 @@ router.post("/", (req, res) => {
           confidence: 5,
           entities,
           reply: `Thank you. I noted your location as ${entities.location}. Is your LOS light red?`,
-          nextAction: "ask_los_status"
+          nextAction: "ask_los_status",
         })
       );
     }
@@ -328,7 +369,7 @@ router.post("/", (req, res) => {
           confidence: 5,
           entities,
           reply: `Thank you. There may be a service interruption in ${entities.location}. Please check the Outage Map page for updates.`,
-          nextAction: "outage"
+          nextAction: "outage",
         })
       );
     }
@@ -344,7 +385,7 @@ router.post("/", (req, res) => {
           confidence: 1,
           entities,
           reply: "Please tell me if your LOS light is red or not red.",
-          nextAction: "ask_los_status"
+          nextAction: "ask_los_status",
         })
       );
     }
@@ -361,14 +402,39 @@ router.post("/", (req, res) => {
           confidence: 5,
           entities,
           reply: `A red LOS light usually means a line or outage issue${
-            session.customerInfo.location ? ` in ${session.customerInfo.location}` : ""
-          }. Please check the Outage Map. If you want account-specific verification, I can also ask for your account number.`,
-          nextAction: "outage"
+            session.customerInfo.location
+              ? ` in ${session.customerInfo.location}`
+              : ""
+          }. Please check the Outage Map. If you want account-specific verification, please sign in first.`,
+          nextAction: "outage",
         })
       );
     }
 
-    session.pendingAction = "ask_account_number";
+    if (!currentUser) {
+      session.pendingAction = null;
+      return res.json(loginRequiredResponse(message, normalizedText, entities));
+    }
+
+    if (!dbUser?.accountNumber) {
+      session.pendingAction = null;
+      return res.json(
+        buildResponse({
+          originalMessage: message,
+          normalizedText,
+          intent: "no_internet",
+          confidence: 1,
+          entities,
+          reply:
+            "You are logged in, but no PLDT account number is saved in your profile yet.",
+          nextAction: "none",
+        })
+      );
+    }
+
+    session.customerInfo.accountNumber = dbUser.accountNumber;
+    session.pendingAction = null;
+
     return res.json(
       buildResponse({
         originalMessage: message,
@@ -376,78 +442,20 @@ router.post("/", (req, res) => {
         intent: "no_internet",
         confidence: 5,
         entities,
-        reply: "Thank you. Since the LOS light is not red, this may need account verification. Please provide your account number.",
-        nextAction: "ask_account_number"
-      })
-    );
-  }
-
-  if (session.pendingAction === "ask_account_number") {
-    if (!entities.accountNumber) {
-      return res.json(
-        buildResponse({
-          originalMessage: message,
-          normalizedText,
-          intent: "ask_account_number",
-          confidence: 1,
-          entities,
-          reply: "Please provide your account number using digits only.",
-          nextAction: "ask_account_number"
-        })
-      );
-    }
-
-    session.customerInfo.accountNumber = entities.accountNumber;
-
-    if (session.lastIntent === "billing") {
-      session.pendingAction = "ask_billing_type";
-      return res.json(
-        buildResponse({
-          originalMessage: message,
-          normalizedText,
-          intent: "billing",
-          confidence: 5,
-          entities,
-          reply: `Thank you. I noted account number ${maskAccountNumber(
-            entities.accountNumber
-          )}. Is your billing concern about balance, due date, payment, invoice, reconnection, or disconnection?`,
-          nextAction: "ask_billing_type"
-        })
-      );
-    }
-
-    if (session.lastIntent === "no_internet") {
-      session.pendingAction = null;
-      return res.json(
-        buildResponse({
-          originalMessage: message,
-          normalizedText,
-          intent: "no_internet",
-          confidence: 5,
-          entities,
-          reply: `Thank you. I noted account number ${maskAccountNumber(
-            entities.accountNumber
-          )}. Your concern may now need account-specific verification by support.`,
-          nextAction: "none"
-        })
-      );
-    }
-
-    session.pendingAction = null;
-    return res.json(
-      buildResponse({
-        originalMessage: message,
-        normalizedText,
-        intent: session.lastIntent || "account_verification",
-        confidence: 5,
-        entities,
-        reply: `Thank you. I noted account number ${maskAccountNumber(entities.accountNumber)}.`,
-        nextAction: "none"
+        reply: `Thank you. I found your registered account number ${maskAccountNumber(
+          dbUser.accountNumber
+        )}. Your concern may now need account-specific verification by support.`,
+        nextAction: "none",
       })
     );
   }
 
   if (session.pendingAction === "ask_billing_type") {
+    if (!currentUser) {
+      session.pendingAction = null;
+      return res.json(loginRequiredResponse(message, normalizedText, entities));
+    }
+
     if (!entities.billingType) {
       return res.json(
         buildResponse({
@@ -456,8 +464,9 @@ router.post("/", (req, res) => {
           intent: "billing",
           confidence: 1,
           entities,
-          reply: "Please tell me if your billing concern is about balance, due date, payment, invoice, reconnection, or disconnection.",
-          nextAction: "ask_billing_type"
+          reply:
+            "Please tell me if your billing concern is about balance, due date, payment, invoice, reconnection, or disconnection.",
+          nextAction: "ask_billing_type",
         })
       );
     }
@@ -475,7 +484,7 @@ router.post("/", (req, res) => {
         reply: `Thank you. I noted that your billing concern is about ${entities.billingType} for account ${maskAccountNumber(
           session.customerInfo.accountNumber
         )}.`,
-        nextAction: "none"
+        nextAction: "none",
       })
     );
   }
@@ -485,7 +494,6 @@ router.post("/", (req, res) => {
 
   session.lastIntent = detected.intent;
   if (entities.location) session.customerInfo.location = entities.location;
-  if (entities.accountNumber) session.customerInfo.accountNumber = entities.accountNumber;
 
   switch (detected.intent) {
     case "greeting":
@@ -498,8 +506,9 @@ router.post("/", (req, res) => {
           confidence: detected.confidence,
           matchedKeywords: detected.matchedKeywords,
           entities,
-          reply: "Hello! I’m your PLDT Smart Support assistant. How can I help you today?",
-          nextAction: "none"
+          reply:
+            "Hello! I’m your PLDT Smart Support assistant. How can I help you today?",
+          nextAction: "none",
         })
       );
 
@@ -514,8 +523,9 @@ router.post("/", (req, res) => {
             confidence: detected.confidence,
             matchedKeywords: detected.matchedKeywords,
             entities,
-            reply: "I can help with your no internet concern. What is your location?",
-            nextAction: "ask_location"
+            reply:
+              "I can help with your no internet concern. What is your location?",
+            nextAction: "ask_location",
           })
         );
       }
@@ -532,7 +542,7 @@ router.post("/", (req, res) => {
           reply: `I noted your location as ${
             entities.location || session.customerInfo.location
           }. Is your LOS light red?`,
-          nextAction: "ask_los_status"
+          nextAction: "ask_los_status",
         })
       );
 
@@ -547,8 +557,9 @@ router.post("/", (req, res) => {
             confidence: detected.confidence,
             matchedKeywords: detected.matchedKeywords,
             entities,
-            reply: "I can check outage-related concerns. What is your location?",
-            nextAction: "ask_location"
+            reply:
+              "I can check outage-related concerns. What is your location?",
+            nextAction: "ask_location",
           })
         );
       }
@@ -565,7 +576,7 @@ router.post("/", (req, res) => {
           reply: `There may be a service interruption in ${
             entities.location || session.customerInfo.location
           }. Please check the Outage Map page for updates.`,
-          nextAction: "outage"
+          nextAction: "outage",
         })
       );
 
@@ -581,7 +592,7 @@ router.post("/", (req, res) => {
           entities,
           reply:
             "I can help with slow internet. Please try restarting your router, checking the signal lights, and reducing connected devices. You may also open the Router Setup page.",
-          nextAction: "router"
+          nextAction: "router",
         })
       );
 
@@ -595,8 +606,9 @@ router.post("/", (req, res) => {
           confidence: detected.confidence,
           matchedKeywords: detected.matchedKeywords,
           entities,
-          reply: "I detected a router concern. Please open the Router Setup page for guided troubleshooting.",
-          nextAction: "router"
+          reply:
+            "I detected a router concern. Please open the Router Setup page for guided troubleshooting.",
+          nextAction: "router",
         })
       );
 
@@ -612,28 +624,46 @@ router.post("/", (req, res) => {
           entities,
           reply:
             "I can help you change your WiFi password. Please open the Router Setup page and log in to your router admin panel.",
-          nextAction: "router"
+          nextAction: "router",
         })
       );
 
     case "billing":
-      if (!session.customerInfo.accountNumber && !entities.accountNumber) {
-        session.pendingAction = "ask_account_number";
+      if (!currentUser || !dbUser) {
+        session.pendingAction = null;
         return res.json(
           buildResponse({
             originalMessage: message,
             normalizedText,
-            intent: detected.intent,
-            confidence: detected.confidence,
-            matchedKeywords: detected.matchedKeywords,
+            intent: "auth_required",
+            confidence: 1,
             entities,
-            reply: "I can help with billing. May I have your account number?",
-            nextAction: "ask_account_number"
+            reply:
+              "For billing concerns, please sign in first so I can automatically use your registered account number.",
+            nextAction: "login",
           })
         );
       }
 
+      if (!dbUser.accountNumber) {
+        session.pendingAction = null;
+        return res.json(
+          buildResponse({
+            originalMessage: message,
+            normalizedText,
+            intent: "billing",
+            confidence: 1,
+            entities,
+            reply:
+              "Your account is logged in, but no PLDT account number is saved yet. Please update your profile first.",
+            nextAction: "none",
+          })
+        );
+      }
+
+      session.customerInfo.accountNumber = dbUser.accountNumber;
       session.pendingAction = "ask_billing_type";
+
       return res.json(
         buildResponse({
           originalMessage: message,
@@ -642,10 +672,10 @@ router.post("/", (req, res) => {
           confidence: detected.confidence,
           matchedKeywords: detected.matchedKeywords,
           entities,
-          reply: `Thank you. I noted account number ${maskAccountNumber(
-            entities.accountNumber || session.customerInfo.accountNumber
+          reply: `I found your registered account number ${maskAccountNumber(
+            dbUser.accountNumber
           )}. Is your billing concern about balance, due date, payment, invoice, reconnection, or disconnection?`,
-          nextAction: "ask_billing_type"
+          nextAction: "ask_billing_type",
         })
       );
 
@@ -661,7 +691,7 @@ router.post("/", (req, res) => {
           entities,
           reply:
             "I’m not fully sure yet. Is your concern about no internet, slow internet, outage, router setup, WiFi password, or billing?",
-          nextAction: "clarify"
+          nextAction: "clarify",
         })
       );
 
@@ -677,7 +707,7 @@ router.post("/", (req, res) => {
           entities,
           reply:
             "Sorry, I could not clearly identify your concern. Please tell me if your issue is about outage, no internet, slow internet, router setup, WiFi password, or billing.",
-          nextAction: "clarify"
+          nextAction: "clarify",
         })
       );
   }

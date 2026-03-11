@@ -1,8 +1,12 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import "../styles/styles.css";
 
 export default function RouterPage() {
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+
   const [currentNode, setCurrentNode] = useState(null);
   const [history, setHistory] = useState([]);
 
@@ -21,9 +25,9 @@ export default function RouterPage() {
       const res = await fetch("http://localhost:5000/api/router/decision", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ nextId })
+        body: JSON.stringify({ nextId }),
       });
 
       const data = await res.json();
@@ -45,12 +49,24 @@ export default function RouterPage() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/router");
+    window.location.reload();
+  };
+
   return (
     <>
       <header>
         <div className="navbar">
           <div className="logo">
-            <img src="/images/logo.png" alt="PLDT Logo" width="50" height="50" />
+            <img
+              src={`${import.meta.env.BASE_URL}images/logo.png`}
+              alt="PLDT Logo"
+              width="50"
+              height="50"
+            />
             <span>PLDT Smart Support</span>
           </div>
 
@@ -59,8 +75,26 @@ export default function RouterPage() {
             <Link to="/chat">Chat Support</Link>
             <Link to="/outage">Outage Map</Link>
             <Link to="/router">Router Setup</Link>
-            <button className="auth">Sign In</button>
-            <button className="auth">Register</button>
+
+            {!token ? (
+              <>
+                <Link className="auth" to="/login">
+                  Sign In
+                </Link>
+                <Link className="auth" to="/signup">
+                  Register
+                </Link>
+              </>
+            ) : (
+              <>
+                <span className="welcome-user">
+                  Welcome, {user?.firstName || user?.username || "User"}
+                </span>
+                <button className="auth" onClick={handleLogout}>
+                  Logout
+                </button>
+              </>
+            )}
           </nav>
         </div>
       </header>

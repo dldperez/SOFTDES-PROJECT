@@ -1,11 +1,10 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "../styles/styles.css";
 
-// Fix default Leaflet marker icons in Vite/React
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
@@ -14,10 +13,14 @@ delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
   iconUrl: markerIcon,
-  shadowUrl: markerShadow
+  shadowUrl: markerShadow,
 });
 
 export default function OutagePage() {
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+
   const [outages, setOutages] = useState([]);
   const [lastRefresh, setLastRefresh] = useState("");
 
@@ -37,17 +40,29 @@ export default function OutagePage() {
 
     const interval = setInterval(() => {
       fetchOutages();
-    }, 15000); // refresh every 15 seconds
+    }, 15000);
 
     return () => clearInterval(interval);
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/outage");
+    window.location.reload();
+  };
 
   return (
     <>
       <header>
         <div className="navbar">
           <div className="logo">
-            <img src="/images/logo.png" alt="PLDT Logo" width="50" height="50" />
+            <img
+              src={`${import.meta.env.BASE_URL}images/logo.png`}
+              alt="PLDT Logo"
+              width="50"
+              height="50"
+            />
             <span>PLDT Smart Support</span>
           </div>
 
@@ -56,8 +71,26 @@ export default function OutagePage() {
             <Link to="/chat">Chat Support</Link>
             <Link to="/outage">Outage Map</Link>
             <Link to="/router">Router Setup</Link>
-            <button className="auth">Sign In</button>
-            <button className="auth">Register</button>
+
+            {!token ? (
+              <>
+                <Link className="auth" to="/login">
+                  Sign In
+                </Link>
+                <Link className="auth" to="/signup">
+                  Register
+                </Link>
+              </>
+            ) : (
+              <>
+                <span className="welcome-user">
+                  Welcome, {user?.firstName || user?.username || "User"}
+                </span>
+                <button className="auth" onClick={handleLogout}>
+                  Logout
+                </button>
+              </>
+            )}
           </nav>
         </div>
       </header>
@@ -68,13 +101,13 @@ export default function OutagePage() {
 
         <div className="leaflet-map-wrapper">
           <MapContainer
-            center={[14.6760, 121.0437]}
+            center={[14.676, 121.0437]}
             zoom={11}
             scrollWheelZoom={true}
             className="leaflet-map"
           >
             <TileLayer
-              attribution='&copy; OpenStreetMap contributors'
+              attribution="&copy; OpenStreetMap contributors"
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
