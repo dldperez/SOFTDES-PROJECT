@@ -1,6 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { useEffect, useRef, useState } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMap,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "../styles/styles.css";
@@ -16,6 +22,25 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
+function MapFocus({ selectedOutage, markerRefs }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!selectedOutage) return;
+
+    map.setView([selectedOutage.lat, selectedOutage.lng], 13, {
+      animate: true,
+    });
+
+    const marker = markerRefs.current[selectedOutage.id];
+    if (marker) {
+      marker.openPopup();
+    }
+  }, [selectedOutage, map, markerRefs]);
+
+  return null;
+}
+
 export default function OutagePage() {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -23,15 +48,28 @@ export default function OutagePage() {
 
   const [outages, setOutages] = useState([]);
   const [lastRefresh, setLastRefresh] = useState("");
+  const [error, setError] = useState("");
+  const [selectedOutage, setSelectedOutage] = useState(null);
+
+  const markerRefs = useRef({});
 
   const fetchOutages = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/outages");
+      setError("");
+
+      const res = await fetch("http://localhost:5000/api/outage");
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! Status: ${res.status}`);
+      }
+
       const data = await res.json();
       setOutages(data);
       setLastRefresh(new Date().toLocaleTimeString());
-    } catch (error) {
-      console.error("Error fetching outages:", error);
+    } catch (err) {
+      console.error("Error fetching outages:", err);
+      setError("Failed to load outage data.");
+      setOutages([]);
     }
   };
 
@@ -50,6 +88,15 @@ export default function OutagePage() {
     localStorage.removeItem("user");
     navigate("/outage");
     window.location.reload();
+  };
+
+  const handleSelectOutage = (item) => {
+    setSelectedOutage(item);
+
+    const mapSection = document.querySelector(".leaflet-map-wrapper");
+    if (mapSection) {
+      mapSection.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
   };
 
   return (
@@ -98,6 +145,7 @@ export default function OutagePage() {
       <section className="map-section">
         <h1>Network Outage Map</h1>
         <p>Last refreshed: {lastRefresh || "Loading..."}</p>
+        {error && <p style={{ color: "red" }}>{error}</p>}
 
         <div className="leaflet-map-wrapper">
           <MapContainer
@@ -111,8 +159,21 @@ export default function OutagePage() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
+            <MapFocus
+              selectedOutage={selectedOutage}
+              markerRefs={markerRefs}
+            />
+
             {outages.map((item) => (
-              <Marker key={item.id} position={[item.lat, item.lng]}>
+              <Marker
+                key={item.id}
+                position={[item.lat, item.lng]}
+                ref={(ref) => {
+                  if (ref) {
+                    markerRefs.current[item.id] = ref;
+                  }
+                }}
+              >
                 <Popup>
                   <strong>{item.area}</strong>
                   <br />
@@ -138,7 +199,12 @@ export default function OutagePage() {
           ) : (
             outages.map((item) => (
               <div key={item.id} className="history-item">
-                <strong>{item.area}</strong>
+                <button
+                  className="outage-location-link"
+                  onClick={() => handleSelectOutage(item)}
+                >
+                  {item.area}
+                </button>
                 <p>Status: {item.status}</p>
                 <p>Severity: {item.severity}</p>
                 <p>Affected Users: {item.affectedUsers}</p>

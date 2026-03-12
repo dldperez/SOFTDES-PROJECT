@@ -38,6 +38,16 @@ export default function RouterPage() {
     }
   };
 
+  const handleBack = () => {
+    if (history.length <= 1) return;
+
+    const updatedHistory = history.slice(0, -1);
+    const previousNode = updatedHistory[updatedHistory.length - 1];
+
+    setHistory(updatedHistory);
+    setCurrentNode(previousNode);
+  };
+
   const handleRestart = async () => {
     try {
       const res = await fetch("http://localhost:5000/api/router");
@@ -144,7 +154,15 @@ export default function RouterPage() {
                 </div>
               )}
 
-              <div style={{ marginTop: "20px" }}>
+              <div className="router-button-row">
+                <button
+                  className="choice-button secondary-choice"
+                  onClick={handleBack}
+                  disabled={history.length <= 1}
+                >
+                  Back
+                </button>
+
                 <button className="choice-button" onClick={handleRestart}>
                   Start Again
                 </button>

@@ -147,8 +147,10 @@ body,
   transition: 0.2s ease;
 }
 
-.btn-signup {
-  background: linear-gradient(135deg, #e2231a, #c91d15);
+.hero-actions .btn-signup {
+  background: linear-gradient(135deg, #f3eee7, #e4ddd2);
+  color: #7a1c1f;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
 }
 
 .btn-login {
@@ -423,7 +425,7 @@ body,
 }
 
 .simple-auth-link {
-  color: var(--pldt-blue);
+  color: var(--pldt-red);
   text-decoration: none;
   font-size: 15px;
   font-weight: 700;
@@ -436,7 +438,7 @@ body,
 }
 
 .secondary-link {
-  color: #7a4a4a;
+  color: var(--pldt-red-dark);
 }
 
 .simple-auth-header {
@@ -491,8 +493,8 @@ body,
 
 .simple-field-group input:focus {
   background: white;
-  border-color: var(--pldt-blue);
-  box-shadow: 0 0 0 4px rgba(0, 112, 201, 0.12);
+  border-color: var(--pldt-red);
+  box-shadow: 0 0 0 4px rgba(215, 25, 32, 0.12);
 }
 
 .simple-password-wrap {
@@ -510,7 +512,7 @@ body,
   transform: translateY(-50%);
   border: none;
   background: transparent;
-  color: var(--pldt-blue-dark);
+  color: var(--pldt-red-dark);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -532,8 +534,8 @@ body,
   margin-top: 6px;
   border: none;
   color: white;
-  background: linear-gradient(135deg, var(--pldt-blue), var(--pldt-blue-dark));
-  box-shadow: 0 12px 24px rgba(0, 112, 201, 0.22);
+  background: linear-gradient(135deg, var(--pldt-red), var(--pldt-red-dark));
+  box-shadow: 0 12px 24px rgba(215, 25, 32, 0.22);
 }
 
 .simple-signup-btn {
@@ -582,13 +584,13 @@ body,
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  border: 1.5px solid var(--pldt-blue);
-  color: var(--pldt-blue);
+  border: 1.5px solid var(--pldt-red);
+  color: var(--pldt-red);
   background: transparent;
 }
 
 .simple-outline-btn:hover {
-  background: rgba(0, 112, 201, 0.06);
+  background: rgba(215, 25, 32, 0.06);
 }
 
 .simple-name-row {
@@ -657,4 +659,36 @@ body,
   .features {
     padding: 24px 16px;
   }
+}
+.router-button-row {
+  margin-top: 20px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.secondary-choice {
+  background: #6b7280;
+}
+
+.secondary-choice:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.outage-location-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0070c9;
+  cursor: pointer;
+  text-align: left;
+}
+
+.outage-location-link:hover {
+  text-decoration: underline;
 }
